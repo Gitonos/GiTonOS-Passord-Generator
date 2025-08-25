@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Password Generator</title>
+    <!-- Tailwind CSS CDN for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the matrix effect and general app aesthetics */
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Hide scrollbars due to canvas */
+        }
+        #matrixCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Place canvas behind other content */
+        }
+        .app-container {
+            background: rgba(0, 0, 0, 0.7); /* Semi-transparent dark background */
+            backdrop-filter: blur(8px); /* Frosted glass effect */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: all 0.3s ease-in-out; /* Smooth transitions for UI elements */
+        }
+        .btn-primary {
+            background-image: linear-gradient(to right, #6A11CB 0%, #2575FC 100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px 0 rgba(49, 196, 190, 0.75);
+        }
+        .btn-primary:hover {
+            background-image: linear-gradient(to right, #2575FC 0%, #6A11CB 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px 0 rgba(49, 196, 190, 0.75);
+        }
+        .input-field {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #E0E7FF;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #6A11CB;
+            box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.5);
+        }
+        .copy-btn {
+            background-color: rgba(255, 255, 255, 0.15);
+            transition: all 0.3s ease;
+        }
+        .copy-btn:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen text-gray-100 bg-gray-900">
+
+    <canvas id="matrixCanvas"></canvas>
+
+    <div class="app-container p-8 rounded-xl max-w-md w-full text-center relative z-10 mx-4 md:mx-0">
+        <h1 class="text-4xl font-extrabold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-600">
+            SecurePass
+        </h1>
+        <p class="text-lg text-gray-300 mb-8">Generate strong, random passwords.</p>
+
+        <div class="flex items-center mb-6">
+            <input
+                type="text"
+                id="passwordDisplay"
+                class="input-field flex-grow px-5 py-3 rounded-l-lg text-xl font-mono"
+                readonly
+                placeholder="Your password will appear here"
+            >
+            <button
+                id="copyButton"
+                class="copy-btn px-4 py-3 rounded-r-lg text-lg text-gray-200 hover:text-white"
+                title="Copy to clipboard"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+            </button>
+        </div>
+
+        <button
+            id="generateButton"
+            class="btn-primary w-full px-6 py-3 rounded-lg text-xl font-semibold text-white uppercase tracking-wider focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50"
+        >
+            Generate Password
+        </button>
+
+        <div id="messageBox" class="mt-6 text-green-400 text-md opacity-0 transition-opacity duration-300"></div>
+    </div>
+
+    <script>
+        // Get references to DOM elements
+        const passwordDisplay = document.getElementById('passwordDisplay');
+        const generateButton = document.getElementById('generateButton');
+        const copyButton = document.getElementById('copyButton');
+        const messageBox = document.getElementById('messageBox');
+        const matrixCanvas = document.getElementById('matrixCanvas');
+        const ctx = matrixCanvas.getContext('2d');
+
+        // Character set for password generation
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+        // Function to generate a random password
+        function generatePassword() {
+            // Random length between 19 and 36 characters
+            const length = Math.floor(Math.random() * (36 - 19 + 1)) + 19;
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            passwordDisplay.value = result; // Display the generated password
+            showMessage('New password generated!', 'green'); // Show success message
+        }
+
+        // Function to copy password to clipboard
+        function copyToClipboard() {
+            if (passwordDisplay.value) {
+                // Use document.execCommand for better cross-browser compatibility in iframes
+                passwordDisplay.select();
+                document.execCommand('copy');
+                showMessage('Password copied to clipboard!', 'blue'); // Show success message
+            } else {
+                showMessage('No password to copy!', 'yellow'); // Show warning message
+            }
+        }
+
+        // Function to show transient messages
+        function showMessage(msg, type) {
+            messageBox.textContent = msg;
+            messageBox.style.opacity = 1;
+
+            // Set text color based on message type
+            if (type === 'green') {
+                messageBox.className = 'mt-6 text-green-400 text-md opacity-100 transition-opacity duration-300';
+            } else if (type === 'blue') {
+                messageBox.className = 'mt-6 text-blue-400 text-md opacity-100 transition-opacity duration-300';
+            } else if (type === 'yellow') {
+                messageBox.className = 'mt-6 text-yellow-400 text-md opacity-100 transition-opacity duration-300';
+            }
+
+            // Hide message after 3 seconds
+            setTimeout(() => {
+                messageBox.style.opacity = 0;
+            }, 3000);
+        }
+
+        // Event listeners for buttons
+        generateButton.addEventListener('click', generatePassword);
+        copyButton.addEventListener('click', copyToClipboard);
+
+        // Initial password generation on page load
+        window.onload = () => {
+            generatePassword();
+            initMatrixEffect(); // Initialize the matrix effect
+        };
+
+        /*
+         * Matrix Animation Effect Logic
+         */
+        let columns;
+        let drops = [];
+        const fontSize = 16;
+        const matrixChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+-=[]{}|;:,.<>?';
+
+        function initMatrixEffect() {
+            matrixCanvas.width = window.innerWidth;
+            matrixCanvas.height = window.innerHeight;
+
+            columns = matrixCanvas.width / fontSize; // Number of columns for the falling characters
+            drops = [];
+            for (let x = 0; x < columns; x++) {
+                drops[x] = 1; // Start each column at the top
+            }
+            drawMatrix(); // Start drawing the matrix animation
+        }
+
+        function drawMatrix() {
+            // Semi-transparent black rectangle to fade out old characters
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+
+            // Set font for characters
+            ctx.font = fontSize + 'px monospace';
+
+            // Iterate over each drop (column)
+            for (let i = 0; i < drops.length; i++) {
+                const text = matrixChars.charAt(Math.floor(Math.random() * matrixChars.length)); // Random character
+
+                // Create a gradient for the falling characters
+                const gradient = ctx.createLinearGradient(0, drops[i] * fontSize, 0, drops[i] * fontSize + fontSize * 10);
+                gradient.addColorStop(0, 'rgba(0, 255, 0, 0.8)'); // Green at the top
+                gradient.addColorStop(0.5, 'rgba(0, 150, 255, 0.6)'); // Blue in the middle
+                gradient.addColorStop(1, 'rgba(150, 0, 255, 0.4)'); // Purple at the bottom
+                ctx.fillStyle = gradient;
+
+                // Draw the character
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                // If the drop is off the screen, reset it to the top randomly
+                if (drops[i] * fontSize > matrixCanvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+
+                // Increment the drop position
+                drops[i]++;
+            }
+            requestAnimationFrame(drawMatrix); // Loop the animation
+        }
+
+        // Handle window resizing to adjust canvas dimensions
+        window.addEventListener('resize', initMatrixEffect);
+    </script>
+</body>
+</html>
