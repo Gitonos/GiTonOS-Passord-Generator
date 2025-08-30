@@ -1,2 +1,2 @@
-# PassWord-0Day
-0Day Zero Nets Password Generator, Fragile GitOnOS Password Generator to None Transition Log Passwords
+# Passord-generator
+Passord generator for å generere passord
